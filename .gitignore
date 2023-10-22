@@ -19,3 +19,34 @@ gradle-app.setting
 .project
 # JDT-specific (Eclipse Java Development Tools)
 .classpath
+
+# Gradle files
+.gradle/
+build/
+
+# Kotlin Build
+*.kotlin_metadata
+*.kotlin_builtins
+
+# IntelliJ IDEA files
+.idea/
+*.iml
+*.iws
+
+# macOS files
+.DS_Store
+
+# Java files (in case any Java is used or generated)
+*.class
+*.log
+
+# Logs and databases
+log/
+*.log
+*.sqlite
+
+# Other typical files you might want to ignore
+*.bak
+*.swp
+*.swo
+.THING*
