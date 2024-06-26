@@ -54,18 +54,16 @@ class FxURLCommand(
 
         val theirMsg = interaction.command.strings[FXURL_ARG1]!!
 
-        when {
-            theirMsg.contains("open.spotify.com") ||
-                theirMsg.contains("music.apple.com") ||
-                theirMsg.contains("music.youtube.com") ->
-                    interaction.deferPublicResponse().respond {
-                        embed { buildMusicEmbed(getMusicLinks(theirMsg))() }
-                    }
+        val myMsg = tryToFix(theirMsg)
 
-            tryToFix(theirMsg).contains(ERROR_MSG) ->
-                interaction.deferEphemeralResponse().respond { content = ERROR_MSG }
-
-            else -> interaction.deferPublicResponse().respond { content = tryToFix(theirMsg) }
+        if (myMsg == ERROR_MSG) {
+            interaction.deferEphemeralResponse().respond {
+                content = myMsg
+            }
+        } else {
+            interaction.deferPublicResponse().respond {
+                content = myMsg
+            }
         }
     }
 
@@ -78,6 +76,9 @@ class FxURLCommand(
                 contains("tiktok.com") -> url.replace("tiktok", "tnktok")
                 contains("reddit.com") -> url.replace("reddit", "rxddit")
                 contains("v.redd.it") -> getFinalUrl(url, 10).replace("reddit", "rxddit")
+                contains("open.spotify.com") ||
+                        contains("music.apple.com") ||
+                        contains("music.youtube.com") -> buildMusicMessage(getMusicLinks(url))
                 else -> ERROR_MSG
             }
         }
@@ -142,14 +143,12 @@ class FxURLCommand(
         return ERROR_MSG
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
     private fun getMusicLinks(url: String): Map<String, String?> = runBlocking {
         val client = HttpClient(CIO) {
             install(ContentNegotiation) {
                 json(Json {
                     ignoreUnknownKeys = true
                     isLenient = true
-                    explicitNulls = false
                 })
             }
         }
@@ -157,13 +156,12 @@ class FxURLCommand(
         try {
             val response: HttpResponse = client.get("https://api.song.link/v1-alpha.1/links?url=$url")
             val odesliResponse: OdesliResponse = response.body()
-            val entity = odesliResponse.entitiesByUniqueId.values.firstOrNull()
             mapOf(
-                "Apple Music" to entity?.linksByPlatform?.appleMusic?.url,
-                "Spotify" to entity?.linksByPlatform?.spotify?.url,
-                "YouTube Music" to entity?.linksByPlatform?.youtubeMusic?.url,
-                "Title" to entity?.title,
-                "Artist" to entity?.artistName
+                "Apple Music" to odesliResponse.linksByPlatform.appleMusic?.url,
+                "Spotify" to odesliResponse.linksByPlatform.spotify?.url,
+                "YouTube Music" to odesliResponse.linksByPlatform.youtubeMusic?.url,
+                "Title" to odesliResponse.entitiesByUniqueId.values.firstOrNull()?.title,
+                "Artist" to odesliResponse.entitiesByUniqueId.values.firstOrNull()?.artistName
             )
         } catch (e: Exception) {
             e.printStackTrace()
@@ -173,38 +171,22 @@ class FxURLCommand(
         }
     }
 
-    private fun buildMusicEmbed(links: Map<String, String?>): suspend dev.kord.rest.builder.message.EmbedBuilder.() ->
-    Unit {
+    private fun buildMusicMessage(links: Map<String, String?>): String {
         val title = links["Title"] ?: "Unknown Title"
         val artist = links["Artist"] ?: "Unknown Artist"
         val spotifyLink = links["Spotify"]
         val appleMusicLink = links["Apple Music"]
         val youtubeMusicLink = links["YouTube Music"]
 
-        return {
-            this.title = title
-            this.description = "by **$artist**"
-            val linkFields = mutableListOf<String>()
-
-            spotifyLink?.let { linkFields.add("[Spotify]($it)") }
-            appleMusicLink?.let { linkFields.add("[Apple Music]($it)") }
-            youtubeMusicLink?.let { linkFields.add("[YouTube Music]($it)") }
-
-            if (linkFields.isNotEmpty()) {
-                field {
-                    name = "Links"
-                    value = linkFields.joinToString { "\n" }
-                    inline = false
-                }
-            } else {
-                field {
-                    name = "Links"
-                    value = "No links available."
-                    inline = false
-                }
-            }
-
-            color = dev.kord.common.Color(0xb28dff)
+        if (spotifyLink.isNullOrBlank() && appleMusicLink.isNullOrBlank() && youtubeMusicLink.isNullOrBlank()) {
+            return ERROR_MSG
         }
+
+        val linkFields = mutableListOf<String>()
+        spotifyLink?.let {linkFields.add("[.]($it)")}
+        appleMusicLink?.let {linkFields.add("[.]($it)")}
+        youtubeMusicLink?.let {linkFields.add("[.]($it)")}
+
+        return "## $title\n> *$artist*" + linkFields.joinToString(" ")
     }
 }
