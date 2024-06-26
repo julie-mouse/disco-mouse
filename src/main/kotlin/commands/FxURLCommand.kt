@@ -8,6 +8,8 @@ import dev.kord.core.behavior.interaction.response.respond
 import dev.kord.core.entity.Message
 import dev.kord.core.entity.interaction.GuildChatInputCommandInteraction
 import dev.kord.rest.builder.interaction.string
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.ResourceBundle
 
 class FxURLCommand(
@@ -35,22 +37,25 @@ class FxURLCommand(
     }
 
     override suspend fun execute(interaction: GuildChatInputCommandInteraction) {
-        val response = interaction.deferPublicResponse()
-        val url = interaction.command.strings[FXURL_ARG1]
 
-        response.respond {
-            content = tryToFix(url!!)
+        val url = tryToFix(interaction.command.strings[FXURL_ARG1]!!)
+
+        if (url == "Can't fix that, sorry") {
+            interaction.deferEphemeralResponse().respond { content = url }
+        } else {
+            interaction.deferPublicResponse().respond { content = url }
         }
     }
 
     private fun tryToFix(url: String): String {
         return with(url) {
             when {
-                contains("instagram.com/reel") -> url.replace("instagram", "ddinstagram")
+                contains("instagram.com/reel") -> url.replace("instagram", "instagramez")
                 contains("twitter.com") -> url.replace("twitter", "twittpr")
                 contains("x.com") -> url.replace("x.com", "twittpr.com")
-                contains("tiktok.com") -> url.replace("tiktok", "vxtiktok")
+                contains("tiktok.com") -> url.replace("tiktok", "tnktok")
                 contains("reddit.com") -> url.replace("reddit", "rxddit")
+                contains("v.redd.it") -> getFinalUrl(url, 10).replace("reddit", "rxddit")
                 else -> "Can't fix that, sorry"
             }
         }
@@ -79,5 +84,39 @@ class FxURLCommand(
         } else {
             cleanMessage.substring(0, end)
         }
+    }
+
+    private fun getFinalUrl(url: String, maxRedirects: Int): String {
+        var redirects = 0
+        var currentUrl = url
+        while (redirects <= maxRedirects) {
+            val connection = URL(currentUrl).openConnection() as HttpURLConnection
+            connection.instanceFollowRedirects = false
+
+            try {
+                connection.connect()
+
+                if (connection.responseCode in 300..399) {
+                    val redirectedUrl = connection.getHeaderField("Location")
+                    if (redirectedUrl != null) {
+                        val newUrl = URL(URL(currentUrl), redirectedUrl).toString()
+                        println("Redirected to: $newUrl")
+                        currentUrl = newUrl
+                        redirects++
+                    } else {
+                        println("No location header for redirect")
+                        return "failed"
+                    }
+                } else {
+                    println("Final URL: $currentUrl")
+                    return currentUrl
+                }
+            } finally {
+                connection.disconnect()
+            }
+        }
+
+        println("Too many redirects")
+        return "failed"
     }
 }
