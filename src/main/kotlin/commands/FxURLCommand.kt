@@ -187,6 +187,6 @@ class FxURLCommand(
         appleMusicLink?.let {linkFields.add("[.]($it)")}
         youtubeMusicLink?.let {linkFields.add("[.]($it)")}
 
-        return "## $title\n> *$artist*" + linkFields.joinToString(" ")
+        return "## $title\n> *$artist*\n" + linkFields.joinToString(" ")
     }
 }
