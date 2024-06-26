@@ -2,15 +2,29 @@ package commands
 
 import COMMAND_FXURL
 import COMMAND_FXURL2
+import ERROR_MSG
 import FXURL_ARG1
 import dev.kord.core.Kord
 import dev.kord.core.behavior.interaction.response.respond
 import dev.kord.core.entity.Message
 import dev.kord.core.entity.interaction.GuildChatInputCommandInteraction
 import dev.kord.rest.builder.interaction.string
+import dev.kord.rest.builder.message.modify.embed
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.ResourceBundle
+
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.request.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.statement.*
+import io.ktor.serialization.kotlinx.json.*
+import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.json.Json
+
 
 class FxURLCommand(
     override val bundle: ResourceBundle,
@@ -38,12 +52,20 @@ class FxURLCommand(
 
     override suspend fun execute(interaction: GuildChatInputCommandInteraction) {
 
-        val url = tryToFix(interaction.command.strings[FXURL_ARG1]!!)
+        val theirMsg = interaction.command.strings[FXURL_ARG1]!!
 
-        if (url == "Can't fix that, sorry") {
-            interaction.deferEphemeralResponse().respond { content = url }
-        } else {
-            interaction.deferPublicResponse().respond { content = url }
+        when {
+            theirMsg.contains("open.spotify.com") ||
+                theirMsg.contains("music.apple.com") ||
+                theirMsg.contains("music.youtube.com") ->
+                    interaction.deferPublicResponse().respond {
+                        embed { buildMusicEmbed(getMusicLinks(theirMsg))() }
+                    }
+
+            tryToFix(theirMsg).contains(ERROR_MSG) ->
+                interaction.deferEphemeralResponse().respond { content = ERROR_MSG }
+
+            else -> interaction.deferPublicResponse().respond { content = tryToFix(theirMsg) }
         }
     }
 
@@ -56,7 +78,7 @@ class FxURLCommand(
                 contains("tiktok.com") -> url.replace("tiktok", "tnktok")
                 contains("reddit.com") -> url.replace("reddit", "rxddit")
                 contains("v.redd.it") -> getFinalUrl(url, 10).replace("reddit", "rxddit")
-                else -> "Can't fix that, sorry"
+                else -> ERROR_MSG
             }
         }
     }
@@ -105,7 +127,7 @@ class FxURLCommand(
                         redirects++
                     } else {
                         println("No location header for redirect")
-                        return "failed"
+                        return ERROR_MSG
                     }
                 } else {
                     println("Final URL: $currentUrl")
@@ -117,6 +139,72 @@ class FxURLCommand(
         }
 
         println("Too many redirects")
-        return "failed"
+        return ERROR_MSG
+    }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    private fun getMusicLinks(url: String): Map<String, String?> = runBlocking {
+        val client = HttpClient(CIO) {
+            install(ContentNegotiation) {
+                json(Json {
+                    ignoreUnknownKeys = true
+                    isLenient = true
+                    explicitNulls = false
+                })
+            }
+        }
+
+        try {
+            val response: HttpResponse = client.get("https://api.song.link/v1-alpha.1/links?url=$url")
+            val odesliResponse: OdesliResponse = response.body()
+            val entity = odesliResponse.entitiesByUniqueId.values.firstOrNull()
+            mapOf(
+                "Apple Music" to entity?.linksByPlatform?.appleMusic?.url,
+                "Spotify" to entity?.linksByPlatform?.spotify?.url,
+                "YouTube Music" to entity?.linksByPlatform?.youtubeMusic?.url,
+                "Title" to entity?.title,
+                "Artist" to entity?.artistName
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyMap()
+        } finally {
+            client.close()
+        }
+    }
+
+    private fun buildMusicEmbed(links: Map<String, String?>): suspend dev.kord.rest.builder.message.EmbedBuilder.() ->
+    Unit {
+        val title = links["Title"] ?: "Unknown Title"
+        val artist = links["Artist"] ?: "Unknown Artist"
+        val spotifyLink = links["Spotify"]
+        val appleMusicLink = links["Apple Music"]
+        val youtubeMusicLink = links["YouTube Music"]
+
+        return {
+            this.title = title
+            this.description = "by **$artist**"
+            val linkFields = mutableListOf<String>()
+
+            spotifyLink?.let { linkFields.add("[Spotify]($it)") }
+            appleMusicLink?.let { linkFields.add("[Apple Music]($it)") }
+            youtubeMusicLink?.let { linkFields.add("[YouTube Music]($it)") }
+
+            if (linkFields.isNotEmpty()) {
+                field {
+                    name = "Links"
+                    value = linkFields.joinToString { "\n" }
+                    inline = false
+                }
+            } else {
+                field {
+                    name = "Links"
+                    value = "No links available."
+                    inline = false
+                }
+            }
+
+            color = dev.kord.common.Color(0xb28dff)
+        }
     }
 }
