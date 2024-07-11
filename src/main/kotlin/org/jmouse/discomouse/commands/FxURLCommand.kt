@@ -1,15 +1,14 @@
-package commands
+package org.jmouse.discomouse.commands
 
-import COMMAND_FXURL
-import COMMAND_FXURL2
-import ERROR_MSG
-import FXURL_ARG1
+import org.jmouse.discomouse.COMMAND_FXURL
+import org.jmouse.discomouse.COMMAND_FXURL2
+import org.jmouse.discomouse.ERROR_MSG
+import org.jmouse.discomouse.FXURL_ARG1
 import dev.kord.core.Kord
 import dev.kord.core.behavior.interaction.response.respond
 import dev.kord.core.entity.Message
 import dev.kord.core.entity.interaction.GuildChatInputCommandInteraction
 import dev.kord.rest.builder.interaction.string
-import dev.kord.rest.builder.message.modify.embed
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.ResourceBundle
@@ -22,7 +21,6 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.statement.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 
 
@@ -97,7 +95,7 @@ class FxURLCommand(
 
     private fun sanitize(message: String): String {
         val cleanMessage = message
-            .removePrefix("/${COMMAND_FXURL}")
+            .removePrefix("/$COMMAND_FXURL")
             .trim()
 
         val end = cleanMessage.indexOfFirst{ it == ' ' } + 1

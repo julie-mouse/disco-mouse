@@ -1,5 +1,7 @@
-import commands.AnonMsgCommand
-import commands.FxURLCommand
+package org.jmouse.discomouse
+
+import org.jmouse.discomouse.commands.AnonMsgCommand
+import org.jmouse.discomouse.commands.FxURLCommand
 import dev.kord.core.Kord
 import dev.kord.core.event.interaction.GuildChatInputCommandInteractionCreateEvent
 import dev.kord.core.event.message.MessageCreateEvent

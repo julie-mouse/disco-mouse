@@ -34,7 +34,7 @@ kotlin {
 
 tasks.withType<Jar> {
     manifest {
-        attributes["Main-Class"] = "BotApplication"
+        attributes["Main-Class"] = "org.jmouse.discomouse.BotApplication"
     }
 
     // To avoid the duplicate handling strategy error

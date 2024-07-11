@@ -1,4 +1,4 @@
-package commands
+package org.jmouse.discomouse.commands
 
 import kotlinx.serialization.Serializable
 

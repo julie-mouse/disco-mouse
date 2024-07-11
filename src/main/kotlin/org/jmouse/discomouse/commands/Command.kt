@@ -1,4 +1,4 @@
-package commands
+package org.jmouse.discomouse.commands
 
 import dev.kord.core.Kord
 import dev.kord.core.entity.interaction.GuildChatInputCommandInteraction

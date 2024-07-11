@@ -1,4 +1,4 @@
-
+package org.jmouse.discomouse
 const val COMMAND_FXURL = "fx"
 const val COMMAND_FXURL2 = "fix"
 const val FXURL_ARG1 = "link"

@@ -1,8 +1,8 @@
-package commands
+package org.jmouse.discomouse.commands
 
-import ANONMSG_MSG
-import ANONMSG_USER
-import COMMAND_ANONMSG
+import org.jmouse.discomouse.ANONMSG_MSG
+import org.jmouse.discomouse.ANONMSG_USER
+import org.jmouse.discomouse.COMMAND_ANONMSG
 import dev.kord.common.entity.Snowflake
 import dev.kord.core.Kord
 import dev.kord.core.behavior.interaction.response.respond
