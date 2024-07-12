@@ -52,16 +52,12 @@ class FxURLCommand(
 
         val theirMsg = interaction.command.strings[FXURL_ARG1]!!
 
+        val myResponse = interaction.deferPublicResponse()
+
         val myMsg = tryToFix(theirMsg)
 
-        if (myMsg == ERROR_MSG) {
-            interaction.deferEphemeralResponse().respond {
-                content = myMsg
-            }
-        } else {
-            interaction.deferPublicResponse().respond {
-                content = myMsg
-            }
+        myResponse.respond {
+            content = myMsg
         }
     }
 
